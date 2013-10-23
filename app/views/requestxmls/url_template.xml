@@ -1,0 +1,130 @@
+<?xml version='1.0'?> 
+<Request type='Order' ID='{CartTransaction_Id}' Date='{DateTime}'> 
+  <Order Version='1.0' CartNumber='{CartTransaction_Id}' Date='{DateTime}'> 
+    <DeploymentMode>Production</DeploymentMode> 
+    <SiteURL>http://localhost:3000/mistemplates/1</SiteURL> 
+    <!--EOI--><Extrinsic Type='{EOICaption}'>{EOIValue}</Extrinsic><!--/EOI--> 
+    <BillTo CostCenter='{CostCentreNumber}' CustomerPO='{PONumber}'> 
+      <Payment Method='{CartType}'> 
+        <Charges Currency='USD' CurrencySymbol='{CurrencySymbol}'> 
+          <Freight cost='{Freight}'>{Freight}</Freight> 
+          <Tax>{CartTax}</Tax> 
+          <Total>{CartCost}</Total> 
+        </Charges> 
+      </Payment> 
+      <PostalAddress> 
+        <CompanyName>{CartAddressCompany}</CompanyName> 
+        <Name>{CustomerName}</Name> 
+        <Attn>{CartAttention}</Attn> 
+        <Address>{CartAddress1}</Address> 
+        <Address>{CartAddress2}</Address> 
+        <Address>{CartAddress3}</Address> 
+        <City>{CartCity}</City> 
+        <StateProv>{CartState}</StateProv> 
+        <PostalCode>{CartZip}</PostalCode> 
+        <Country>{CartCountry}</Country> 
+        <ContactPhone>{CartAddressPhoneNumber}</ContactPhone> 
+      </PostalAddress> 
+      <BillingAddress> 
+        <Address>{CartBillingAddress1}</Address> 
+        <Address>{CartBillingAddress2}</Address> 
+        <Address>{CartBillingAddress3}</Address>
+        <City>{CartBillingCity}</City> 
+        <StateProv>{CartBillingState}</StateProv> 
+        <PostalCode>{CartBillingZip}</PostalCode> 
+        <Country>{CartBillingCountry}</Country> 
+      </BillingAddress> 
+    </BillTo> 
+    <OrderedBy> 
+      <FirstName>{OrderedByFirstName}</FirstName> 
+      <LastName>{OrderedByLastName}</LastName> 
+      <Phone>{OrderedByPhone}</Phone> 
+      <Email>{OrderedByEmail}</Email> 
+      <ExtEmpID>{OrderedByExtEmpID}</ExtEmpID> 
+      <AddEmpInfo>{OrderedByAddEmpInfo}</AddEmpInfo> 
+      <CostCentreName>{OrderedByCostCentreName}</CostCentreName> 
+      <Username>{OrderedByUsername}</Username> 
+      <!--EmployeeExtraInputField--><Extrinsic 
+        Type='{ExtraInputFieldExternalName}'>{ExtraInputFieldValue}</Extrinsic> 
+      <!--/EmployeeExtraInputField--> 
+    </OrderedBy> 
+  </Order> 
+  
+  <Items> 
+    <Item LineNumber='{OrderNumber}' Rush='{Urgent}' type='{StatusType}' 
+      approved='{Approved}' WaitingScheduler='{WaitingSchedulerProcess}'> 
+      <Supplier>{SupplierCode}</Supplier> 
+      <SupplierPartID>{DebtorCode}</SupplierPartID> 
+      <ManufacturerPartID>{MasterNo}</ManufacturerPartID> 
+      <TemplateName>{TemplateName}</TemplateName> 
+      <Quantity>{Quantity}</Quantity> 
+      <UnitSize>{QtyPerUnit}</UnitSize> 
+      <Image>{File}</Image> 
+      <ImpositionImage>{ImpFile}</ImpositionImage> 
+      <SchedulerFile>{SchedulerFile}</SchedulerFile> 
+      <FileUpload>{FileUpload}</FileUpload> 
+      <FileUploadName>{FileUploadName}</FileUploadName> 
+      <!--NexJobFiles{Order_Id}--> 
+      <NexJobFileUpload filenumber='{filenumber}'>{NJFile}</NexJobFileUpload> 
+      <NexJobFileUploadConverted 
+        filenumber='{filenumber}'>{NJPDFFile}</NexJobFileUploadConverted> 
+      <!--/NexJobFiles{Order_Id}--> 
+      <TypeSettingInfo>{TypeSettingInfo}</TypeSettingInfo> 
+      <TemplateOtherInformation>{OtherInformation}</TemplateOtherInformation> 
+      <ApproverComments>{ApprovalApproverComments}</ApproverComments> 
+      <UserComments>{IndividualComments}</UserComments> 
+      <Project> 
+        <!--Project{Order_Id}--> 
+        <ProjectName>{pjctname}</ProjectName> 
+        <UrgentPostage>{pjcturgentpostage}</UrgentPostage> 
+        <UploadedList>{pjctlistfile}</UploadedList> 
+        <UploadedListName>{pjctlistname}</UploadedListName> 
+        <ListRecordCount>{pjctlistrecordcount}</ListRecordCount> 
+        <!--/Project{Order_Id}--> 
+        <!--ProjectPage{Order_Id}--> 
+        <ProjectPage Number='{pjctpgnum}' Name='{pjctpgname}'> 
+          <NumberPagesinFile>{pjctnumofpgs}</NumberPagesinFile> 
+          <ProjectPageFile>{pjctfile}</ProjectPageFile> 
+          <ProjectPageQuantity>{pjctqty}</ProjectPageQuantity> 
+          <!--ProjectEOI{Order_Id}-{pjctpgnum}--> 
+          <Extrinsic 
+            Type='{projectCaption}'>{projectValue}</Extrinsic> 
+          <!--/ProjectEOI{Order_Id}-{pjctpgnum}--> 
+          <Extrinsic Type='SupplierCode'>{suppliercode}</Extrinsic> 
+        </ProjectPage> 
+        <!--/ProjectPage{Order_Id}--> 
+      </Project> 
+      <!--BackTemplate--> 
+      <BackManufacturerPartID>{BackMasterNo}</BackManufacturerPartID> 
+      <BackTemplateName>{BackTemplateName}</BackTemplateName>
+      <BackImage>{BackFile}</BackImage> 
+      <BackImpositionImage>{BackImpFile}</BackImpositionImage> 
+      <!--/BackTemplate--> 
+      <Extrinsic Type='NameOnStationery'>{StationeryName}</Extrinsic> 
+      <!--EOI{Order_Id}--><Extrinsic Type='{EOICaption}'>{EOIValue}</Extrinsic><!--/EOI{Order_Id}--> 
+      <ShipTo> 
+        <Carrier>{FreightType}</Carrier> 
+        <Method>{FreightMethod}</Method> 
+        <PostalAddress> 
+          <CompanyName>{OrderAddressCompany}</CompanyName> 
+          <Name>{CustomerName}</Name> 
+          <Attn>{OrderAttention}</Attn> 
+          <Address>{OrderAddress1}</Address> 
+          <Address>{OrderAddress2}</Address> 
+          <Address>{OrderAddress3}</Address> 
+          <City>{OrderCity}</City> 
+          <StateProv>{OrderState}</StateProv> 
+          <PostalCode>{OrderZip}</PostalCode> 
+          <Country>{OrderCountry}</Country> 
+          <ContactPhone>{OrderAddressPhoneNumber}</ContactPhone> 
+        </PostalAddress> 
+      </ShipTo> 
+      <Charges Currency='USD'> 
+        <!--OrderCost--><Item>{OrderCost}</Item><!--/OrderCost--> 
+        <!--OrderTax--><Tax>{OrderTax}</Tax><!--/OrderTax--> 
+        <!--OrderPostage--><Postage>{OrderPostage}</Postage><!--/OrderPostage--> 
+        <!--OrderTotal--><Total>{TotalCost}</Total><!--/OrderTotal--> 
+      </Charges> 
+    </Item> 
+  </Items> 
+</Request> 
