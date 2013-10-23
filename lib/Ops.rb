@@ -14,6 +14,8 @@ class Ops
     @template_external_number = "48098"
     @urlreturn = "http://localhost:3000/templates"
     @order_number = "78983"
+    @status = "create"
+    create_new_order
   end
 
   def return_ops_url(ops_template_id)
@@ -27,11 +29,39 @@ class Ops
     xml = Builder::XmlMarkup.new
     xml.instruct!
     xml.declare! :DOCTYPE, :cXML, SYSTEM, "http://xml.cXML.org/schemas/cXML/1.2.007/cXML.dtd"
-    xml.cxml("playloadID" => "", "timestamp" =>"optional", "version"=>"1.0","xml:lang" => "en")
+    xml.cxml("playloadID" => "", "timestamp" =>"optional", "version"=>"1.0","xml:lang" => "en") do
+      xml.Header do
+        xml.from do
+          xml.Credential("domain"=>"DUNS") do
+            xml.Identity @duns
+          end
+        end
+        xml.To do
+          xml.Credential("domain"=>"DUNS") do
+            xml.Identity
+          end
+        end
+        xml.Sender do
+          xml.Credential("domain"=> "NetworkUserId") do
+            xml.Identity
+            xml.SharedSecret @shared_secret
+          end
+          xml.UserAgent @user_agent
+        end
+      end
+      xml.Request("deplymentMode" => "test") do
+        xml.PunchOutSetupRequest("operation" => :status) do
+          xml.BuyerCookie @buyer_cookie
+          xml.Extrinsic('name' => "#{@buyer_cookie}")
+        end
+      end
+
+
+    end
+    puts xml
   end
 
   def return_shoopingcart_xml(ops_template_id)
-    xml =
   end
 
   def convert_to_xml(hash)
