@@ -12,7 +12,7 @@ class RequestxmlsController < ApplicationController
     xml.declare! :DOCTYPE, :cXML, :SYSTEM, "http://xml.cXML.org/schemas/cXML/1.2.007/cXML.dtd"
     xml.cxml("xml:lang" => "en-US","playloadID" => "", "timestamp" =>"optional") do
       xml.Response do
-        xml.Satus("code" => "200", "text" => "succes")
+        xml.Status("code" => "200", "text" => "succes")
         xml.PunchOutSetupResponse do
           xml.StartPage do
             xml.URL "http://localhost:3000/mistemplates/1"
