@@ -4,26 +4,25 @@ class Ops
   attr_accessor :duns,:shared_secrete,:user_agent,:buyer_cookie,:cost_center_number,:employ_email,
     :user_name,:template_external_number,:url_return,:order_number, :start_point
   def initialize
-    @duns = '12345'
-    @shared_secret = '98765'
-    @user_agent = 'Inkd.com'
-    @buyer_cookie = 'user'
-    @cost_center_number = '12354'
-    @employ_email = 'johndoe@inkd.com'
-    @user_name = 'johndoe'
+    @duns                     = '12345'
+    @shared_secret            = '98765'
+    @user_agent               = 'Inkd.com'
+    @buyer_cookie             = 'user'
+    @cost_center_number       = '12354'
+    @employ_email             = 'johndoe@inkd.com'
+    @user_name                = 'johndoe'
     @template_external_number = '48098'
-    @url_return = 'http://localhost:3000/templates'
-    @order_number = '78983'
-    @status = 'create'
-    @start_point = ''
-    create_new_order
+    @url_return               = 'http://localhost:3000/templates'
+    @order_number             = '78983'
+    @status                   = 'create'
+    @start_point              = ''
   end
 
   def return_ops_url(ops_template_id)
-    xml = convert_to_xml(:key => ops_template_id)
+    xml         = create_new_order
     request_xml = HTTParty.get("http://localhost:3000/requestxmls/receive_xml.xml",:body => xml, :headers => {'Content-type' => 'text/xml'})
-    hash = convert_to_hash(request_xml)
-    url = hash['siteurl']
+    hash        = convert_to_hash(request_xml)
+    url         = hash['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
   end
 
   def create_new_order
@@ -67,8 +66,6 @@ class Ops
           end
         end
       end
-
-
     end
   end
 
