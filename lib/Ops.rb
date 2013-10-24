@@ -22,7 +22,12 @@ class Ops
     xml         = create_new_order
     request_xml = HTTParty.get("http://localhost:3000/requestxmls/receive_xml.xml",:body => xml, :headers => {'Content-type' => 'text/xml'})
     hash        = convert_to_hash(request_xml)
-    url         = hash['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
+    status      = hash['cxml']['Response']['Status']['code']
+    if status == "200"
+      url = hash['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
+    else
+      url = "http://localhost:3000"
+    end
   end
 
   def create_new_order
