@@ -20,7 +20,7 @@ class Ops
 
   def return_ops_url(ops_template_id)
     xml         = create_new_order
-    request_xml = HTTParty.get("http://localhost:3000/requestxmls/receive_xml.xml",:body => xml, :headers => {'Content-type' => 'text/xml'})
+    request_xml = HTTParty.post("http://localhost:3000/requestxmls/receive_xml.xml",:body => xml, :headers => {'Content-type' => 'text/xml'})
     hash        = convert_to_hash(request_xml)
     status      = hash['cxml']['Response']['Status']['code']
     if status == "200"
