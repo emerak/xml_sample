@@ -2,6 +2,7 @@ require 'active_support'
 require 'builder'
 require 'ostruct'
 class Ops
+
   def initialize
     @url_for_new_order        = "http://localhost:3000/requestxmls/receive_xml.xml"
     @url_for_approval_order   = "http://localhost:3000/requestxmls/receive_xml.xml"
@@ -14,16 +15,16 @@ class Ops
     url           = hash_request['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
   end
 
-  def returns_images_generated
-    xml           = create_new_order
-    request       = HTTParty.get(@url_for_approval_order, :body => "xml", :headers => {'Content-type' => 'text/xml'})
+  def returns_images_generated params
+    xml           = generate_order_approval(params)
+    request       = HTTParty.get(@url_for_approval_order, :body => xml, :headers => {'Content-type' => 'text/xml'})
     hash_request  = verify_response(request)
     hash_request['images']
   end
 
-  def create_new_order params
+  def create_order params
     dataOps = create_struct(params)
-    @extrinc = { 'CostCenter'=> dataOps.cost_center_number, 'UserEmail'=> dataOps.employ_email, 'UniqueName'=> dataOps.user_name, 'StartPoint'=> dataOps.start_point }
+    extrinc = { 'CostCenter'=> dataOps.cost_center_number, 'UserEmail'=> dataOps.employ_email, 'UniqueName'=> dataOps.user_name, 'StartPoint'=> dataOps.start_point }
     xml = Builder::XmlMarkup.new
     xml.instruct!
     xml.declare! :DOCTYPE, :cXML, :SYSTEM, "http://xml.cXML.org/schemas/cXML/1.2.007/cXML.dtd"
@@ -50,15 +51,23 @@ class Ops
       xml.Request("deploymentMode" => "test") do
         xml.PunchOutSetupRequest("operation" => "#{dataOps.status}") do
           xml.BuyerCookie dataOps.buyer_cookie
-          @extrinc.each do |k,v|
+          extrinc.each do |k,v|
             xml.Extrinsic(v,'name'=> k)
           end
           xml.BrowserFormPost do
             xml.URL dataOps.url_return
           end
-          xml.SelectedItem do
-            xml.ItemID do
-              xml.SupplierPartID dataOps.template_external_number
+          if dataOps.status == "create"
+            xml.SelectedItem do
+              xml.ItemID do
+                xml.SupplierPartID dataOps.template_external_number
+              end
+            end
+          else if xml.dataOps.status == "edit"
+            xml.ItemOut do
+              xml.ItemId do
+                xml.SupplierPartID dataOps.supplier_part_id
+              end
             end
           end
         end
@@ -66,7 +75,8 @@ class Ops
     end
   end
 
-  def generate_order_approval
+  def generate_order_approval params
+    dataOps = create_struct(params)
     xml = Builder::XmlMarkup.new
     xml.instruct!
     xml.Request("type" => "Order","Id" => dataOps.cart_transaction_id, "Date" => dataOps.date_time) do
@@ -135,7 +145,10 @@ class Ops
                 xml.comment! "/ExtraInputField"
               end
               xml.items do
-                xml.item("LineNumber" => dataOps.order_number, "Rush" => dataOps.urgent, "type" => dataOps.status_type, "approved" => dataOps.approved, "WaitingScheduler" => dataOps.waiting_scheduler_process) do
+
+                xml.item("LineNumber" => dataOps.order_number, "Rush" => dataOps.urgent, "type" => dataOps.status_type, "approved" => dataOps.approved,
+                         "WaitingScheduler" => dataOps.waiting_scheduler_process) do
+
                   xml.Supplier                dataOps.supplier_code
                   xml.SupplierPartID          dataOps.deptor_code
                   xml.ManufacturerPartID      dataOps.master_no
@@ -282,16 +295,11 @@ class Ops
     end
   end
 
-  def return_shoopingcart_xml(ops_template_id)
-  end
-
   def verify_response response
     response_in_hash = convert_to_hash(response)
-    status      = response_in_hash['cxml']['Response']['Status']['code']
-    if status == "200"
-      response_in_hash
-    else
-      url = "http://localhost:3000/fails"
+    status = response_in_hash['cxml']['Response']['Status']['code']
+    return response_in_hash if status == "200"
+    "fail"
     end
   end
 
