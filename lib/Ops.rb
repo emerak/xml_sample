@@ -9,15 +9,16 @@ class Ops
 
   def return_ops_url(ops_template_id,params)
     xml           = create_new_order(params)
-    request       = HTTParty.get(@url_for_new_order,:body => xml, :headers => {'Content-type' => 'text/xml'})
+    request       = HTTParty.post(@url_for_new_order,:body => xml, :headers => {'Content-type' => 'text/xml'})
     hash_request  = verify_response(request)
     url           = hash_request['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
   end
 
   def returns_images_generated
     xml           = create_new_order
-    request       = HTTParty.get(dataOps.url_for_approval_order, :body => "xml", :headers => {'Content-type' => 'text/xml'})
+    request       = HTTParty.get(@url_for_approval_order, :body => "xml", :headers => {'Content-type' => 'text/xml'})
     hash_request  = verify_response(request)
+    hash_request['images']
   end
 
   def create_new_order params
@@ -295,8 +296,7 @@ class Ops
   end
 
   def create_struct data
-    hash = eval(data)
-    OpenStruct.new(hash)
+    OpenStruct.new(data)
   end
 
   def convert_to_xml(hash)
