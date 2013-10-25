@@ -9,7 +9,7 @@ class Ops
   end
 
   def return_ops_url(ops_template_id,params)
-    xml           = create_new_order(params)
+    xml           = create_order(params)
     request       = HTTParty.post(@url_for_new_order,:body => xml, :headers => {'Content-type' => 'text/xml'})
     hash_request  = verify_response(request)
     url           = hash_request['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
@@ -63,7 +63,7 @@ class Ops
                 xml.SupplierPartID dataOps.template_external_number
               end
             end
-          else if xml.dataOps.status == "edit"
+          else if dataOps.status == "edit"
             xml.ItemOut do
               xml.ItemId do
                 xml.SupplierPartID dataOps.supplier_part_id
