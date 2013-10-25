@@ -1,37 +1,28 @@
 require 'active_support'
 require 'builder'
+require 'ostruct'
 class Ops
-  attr_accessor :duns,:shared_secrete,:user_agent,:buyer_cookie,:cost_center_number,:employ_email,
-    :user_name,:template_external_number,:url_return,:order_number, :start_point
   def initialize
-    @duns                     = '12345'
-    @shared_secret            = '98765'
-    @user_agent               = 'Inkd.com'
-    @buyer_cookie             = 'user'
-    @cost_center_number       = '12354'
-    @employ_email             = 'johndoe@inkd.com'
-    @user_name                = 'johndoe'
-    @template_external_number = '48098'
-    @url_return               = 'http://localhost:3000/templates'
-    @order_number             = '78983'
-    @status                   = 'create'
-    @start_point              = ''
+    @url_for_new_order        = "http://localhost:3000/requestxmls/receive_xml.xml"
+    @url_for_approval_order   = "http://localhost:3000/requestxmls/receive_xml.xml"
   end
 
-  def return_ops_url(ops_template_id)
-    xml         = create_new_order
-    request_xml = HTTParty.post("http://localhost:3000/requestxmls/receive_xml.xml",:body => xml, :headers => {'Content-type' => 'text/xml'})
-    hash        = convert_to_hash(request_xml)
-    status      = hash['cxml']['Response']['Status']['code']
-    if status == "200"
-      url = hash['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
-    else
-      url = "http://localhost:3000"
-    end
+  def return_ops_url(ops_template_id,params)
+    xml           = create_new_order(params)
+    request       = HTTParty.get(@url_for_new_order,:body => xml, :headers => {'Content-type' => 'text/xml'})
+    hash_request  = verify_response(request)
+    url           = hash_request['cxml']['Response']['PunchOutSetupResponse']['StartPage']['URL']
   end
 
-  def create_new_order
-    @extrinc = { 'CostCenter'=> @cost_center_number, 'UserEmail'=> @employ_email, 'UniqueName'=> @user_name, 'StartPoint'=> @start_point }
+  def returns_images_generated
+    xml           = create_new_order
+    request       = HTTParty.get(dataOps.url_for_approval_order, :body => "xml", :headers => {'Content-type' => 'text/xml'})
+    hash_request  = verify_response(request)
+  end
+
+  def create_new_order params
+    dataOps = create_struct(params)
+    @extrinc = { 'CostCenter'=> dataOps.cost_center_number, 'UserEmail'=> dataOps.employ_email, 'UniqueName'=> dataOps.user_name, 'StartPoint'=> dataOps.start_point }
     xml = Builder::XmlMarkup.new
     xml.instruct!
     xml.declare! :DOCTYPE, :cXML, :SYSTEM, "http://xml.cXML.org/schemas/cXML/1.2.007/cXML.dtd"
@@ -39,7 +30,7 @@ class Ops
       xml.Header do
         xml.From do
           xml.Credential("domain"=>"DUNS") do
-            xml.Identity @duns
+            xml.Identity dataOps.duns
           end
         end
         xml.To do
@@ -50,23 +41,23 @@ class Ops
         xml.Sender do
           xml.Credential("domain"=> "NetworkUserId") do
             xml.Identity
-            xml.SharedSecret @shared_secret
+            xml.SharedSecret dataOps.shared_secret
           end
-          xml.UserAgent @user_agent
+          xml.UserAgent dataOps.user_agent
         end
       end
       xml.Request("deploymentMode" => "test") do
-        xml.PunchOutSetupRequest("operation" => "#{@status}") do
-          xml.BuyerCookie @buyer_cookie
+        xml.PunchOutSetupRequest("operation" => "#{dataOps.status}") do
+          xml.BuyerCookie dataOps.buyer_cookie
           @extrinc.each do |k,v|
             xml.Extrinsic(v,'name'=> k)
           end
           xml.BrowserFormPost do
-            xml.URL @url_return
+            xml.URL dataOps.url_return
           end
           xml.SelectedItem do
             xml.ItemID do
-              xml.SupplierPartID @template_external_number
+              xml.SupplierPartID dataOps.template_external_number
             end
           end
         end
@@ -77,151 +68,151 @@ class Ops
   def generate_order_approval
     xml = Builder::XmlMarkup.new
     xml.instruct!
-    xml.Request("type" => "Order","Id" => @cart_transaction_id, "Date" => @date_time) do
-      xml.Order("Version" => "1.0", "CartNumber" => @cart_transaction_id, "Date" => @date_time) do
+    xml.Request("type" => "Order","Id" => dataOps.cart_transaction_id, "Date" => dataOps.date_time) do
+      xml.Order("Version" => "1.0", "CartNumber" => dataOps.cart_transaction_id, "Date" => dataOps.date_time) do
         xml.DeploymentMode "Production"
-        xml.SiteUrl @url
+        xml.SiteUrl dataOps.url
         xml.comment! "EOI"
-        xml.Extrinsic("Type" => @eoi_caption) do @eoi_value end
+        xml.Extrinsic("Type" => dataOps.eoi_caption) do dataOps.eoi_value end
         xml.comment! "/EOI"
-        xml.BillTo("CostCenter" => @cost_centre_number, "CustomerPO" => @po_number) do
-          xml.Payment("Method" => @cart_type) do
-            xml.Charges("Currency" => "USD", "CurrencySymbol" => @currency_symbol)  do
-              xml.Freight("cost" => @freight)   do @freight end
-              xml.Tax                           @cart_tax
-              xml.Total                         @cart_cost
+        xml.BillTo("CostCenter" => dataOps.cost_centre_number, "CustomerPO" => dataOps.po_number) do
+          xml.Payment("Method" => dataOps.cart_type) do
+            xml.Charges("Currency" => "USD", "CurrencySymbol" => dataOps.currency_symbol)  do
+              xml.Freight("cost" => dataOps.freight)   do dataOps.freight end
+              xml.Tax      dataOps.cart_tax
+              xml.Total    dataOps.cart_cost
             end
           end
           xml.PostalAddress do
-            xml.CompanyName  @cart_address_company
-            xml.name         @customer_name
-            xml.attn         @cart_attention
-            [@cart_address_1,@cart_address_2,@cart_address_3].each do |address|
+            xml.CompanyName  dataOps.cart_address_company
+            xml.name         dataOps.customer_name
+            xml.attn         dataOps.cart_attention
+            [dataOps.cart_address_1,dataOps.cart_address_2,dataOps.cart_address_3].each do |address|
               xml.Address address
             end
-            xml.City          @cart_city
-            xml.StateProv     @cart_state
-            xml.PostalCode    @cart_zip
-            xml.Country       @cart_country
-            xml.ContactPhone  @cart_address_phone_number
+            xml.City          dataOps.cart_city
+            xml.StateProv     dataOps.cart_state
+            xml.PostalCode    dataOps.cart_zip
+            xml.Country       dataOps.cart_country
+            xml.ContactPhone  dataOps.cart_address_phone_number
           end
           xml.BillingAddress do
-            [@cart_billing_address1,@cart_billing_address2,@cart_billing_address3].each do |cart_address|
+            [dataOps.cart_billing_address1,dataOps.cart_billing_address2,dataOps.cart_billing_address3].each do |cart_address|
               xml.Address cart_address
             end
-            xml.City          @cart_billing_city
-            xml.StateProv     @cart_billing_state
-            xml.PostalCode    @cart_billing_zip
-            xml.Country       @cart_billing_country
+            xml.City          dataOps.cart_billing_city
+            xml.StateProv     dataOps.cart_billing_state
+            xml.PostalCode    dataOps.cart_billing_zip
+            xml.Country       dataOps.cart_billing_country
           end
-          xml.UserAgent @user_agent
+          xml.UserAgent dataOps.user_agent
         end
       end
       xml.Request("deploymentMode" => "test") do
-        xml.PunchOutSetupRequest("operation" => "#{@status}") do
-          xml.BuyerCookie @buyer_cookie
-          @extrinc.each do |k,v|
+        xml.PunchOutSetupRequest("operation" => "#{dataOps.status}") do
+          xml.BuyerCookie dataOps.buyer_cookie
+          dataOps.extrinc.each do |k,v|
             xml.Extrinsic(v,'name'=> k)
           end
           xml.BrowserFormPost do
-            xml.URL @url_return
+            xml.URL dataOps.url_return
           end
           xml.SelectedItem do
             xml.ItemID do
-              xml.SupplierPartID @template_external_number
+              xml.SupplierPartID dataOps.template_external_number
               xml.Ordered_by do
-                xml.FirstName       @ordered_by_first_name
-                xml.LastName        @ordered_by_last_name
-                xml.Phone           @ordered_by_phone
-                xml.Email           @ordered_by_email
-                xml.ExtEmpId        @ordered_by_ext_emp_id
-                xml.AddEmpInfo      @ordered_by_add_emp_info
-                xml.CostCentreName  @ordered_by_cost_centre_name
-                xml.UserName        @ordered_by_user_name
+                xml.FirstName       dataOps.ordered_by_first_name
+                xml.LastName        dataOps.ordered_by_last_name
+                xml.Phone           dataOps.ordered_by_phone
+                xml.Email           dataOps.ordered_by_email
+                xml.ExtEmpId        dataOps.ordered_by_ext_emp_id
+                xml.AddEmpInfo      dataOps.ordered_by_add_emp_info
+                xml.CostCentreName  dataOps.ordered_by_cost_centre_name
+                xml.UserName        dataOps.ordered_by_user_name
                 xml.comment! "ExtraInputField"
-                xml.Extrinsic("Type" => @extra_input_field_external_name) do @extra_input_field_name end
+                xml.Extrinsic("Type" => dataOps.extra_input_field_external_name) do dataOps.extra_input_field_name end
                 xml.comment! "/ExtraInputField"
               end
               xml.items do
-                xml.item("LineNumber" => @order_number, "Rush" => @urgent, "type" => @status_type, "approved" => @approved, "WaitingScheduler" => @waiting_scheduler_process) do
-                  xml.Supplier                @supplier_code
-                  xml.SupplierPartID          @deptor_code
-                  xml.ManufacturerPartID      @master_no
-                  xml.TemplateName            @template_name
-                  xml.Quantity                @quantity
-                  xml.UnitSize                @qty_per_unit
-                  xml.Image                   @file
-                  xml.ImpositionImage         @imp_file
-                  xml.ShedulerFile            @sheduler_file
-                  xml.FileUpload              @file_upload
-                  xml.FileUploadName          @file_upload_name
-                  xml.comment! "NexJobFiles#{@order_id}"
-                  xml.NexJobFileUpload("filenumber" => @file_number) do @nj_file end
-                  xml.NexJobFileUploadConverted("filenumber" => @file_number) do @njpd_file end
-                  xml.comment! "/NexJobFiles#{@order_id}"
-                  xml.TypeSettingInfo          @type_setting_info
-                  xml.TemplateOrderInformation @other_information
-                  xml.ApproverComments         @approval_approver_comments
-                  xml.UserComments             @individual_comments
+                xml.item("LineNumber" => dataOps.order_number, "Rush" => dataOps.urgent, "type" => dataOps.status_type, "approved" => dataOps.approved, "WaitingScheduler" => dataOps.waiting_scheduler_process) do
+                  xml.Supplier                dataOps.supplier_code
+                  xml.SupplierPartID          dataOps.deptor_code
+                  xml.ManufacturerPartID      dataOps.master_no
+                  xml.TemplateName            dataOps.template_name
+                  xml.Quantity                dataOps.quantity
+                  xml.UnitSize                dataOps.qty_per_unit
+                  xml.Image                   dataOps.file
+                  xml.ImpositionImage         dataOps.imp_file
+                  xml.ShedulerFile            dataOps.sheduler_file
+                  xml.FileUpload              dataOps.file_upload
+                  xml.FileUploadName          dataOps.file_upload_name
+                  xml.comment! "NexJobFiles#{dataOps.order_id}"
+                  xml.NexJobFileUpload("filenumber" => dataOps.file_number) do dataOps.nj_file end
+                  xml.NexJobFileUploadConverted("filenumber" => dataOps.file_number) do dataOps.njpd_file end
+                  xml.comment! "/NexJobFiles#{dataOps.order_id}"
+                  xml.TypeSettingInfo          dataOps.type_setting_info
+                  xml.TemplateOrderInformation dataOps.other_information
+                  xml.ApproverComments         dataOps.approval_approver_comments
+                  xml.UserComments             dataOps.individual_comments
                   xml.Project do
-                    xml.comment! "Project#{@order_id}"
-                    xml.ProjectName       @pjct_name
-                    xml.UrgentPostage     @pjct_urgent_postage
-                    xml.UploaderList      @pjct_list_file
-                    xml.UploaderListName  @pjct_list_name
-                    xml.ListRecordCount   @pjct_list_record_count
-                    xml.comment! "/Project#{@order_id}"
-                    xml.comment! "ProjectPage#{@order_id}"
-                    xml.ProjectPage("Number" => @pjct_pg_num, "Name" => @pjct_pg_name) do
-                      xml.NumberPagesinFile     @pjct_num_of_pgs
-                      xml.ProjectPageFile       @pjct_file
-                      xml.ProjectPageQuantity   @pjct_qty
-                      xml.comment! "ProjectEOI#{@order_id}-#{@pjct_pg_num}"
-                      xml.Extrinsic("Type" => @project_caption) do @project_value end
-                      xml.comment! "/ProjectEOI#{@order_id}-#{@pjct_pg_num}"
-                      xml.Extrinsic("Type" => "SupplierCode") do @supplier_code end
+                    xml.comment! "Project#{dataOps.order_id}"
+                    xml.ProjectName       dataOps.pjct_name
+                    xml.UrgentPostage     dataOps.pjct_urgent_postage
+                    xml.UploaderList      dataOps.pjct_list_file
+                    xml.UploaderListName  dataOps.pjct_list_name
+                    xml.ListRecordCount   dataOps.pjct_list_record_count
+                    xml.comment! "/Project#{dataOps.order_id}"
+                    xml.comment! "ProjectPage#{dataOps.order_id}"
+                    xml.ProjectPage("Number" => dataOps.pjct_pg_num, "Name" => dataOps.pjct_pg_name) do
+                      xml.NumberPagesinFile     dataOps.pjct_num_of_pgs
+                      xml.ProjectPageFile       dataOps.pjct_file
+                      xml.ProjectPageQuantity   dataOps.pjct_qty
+                      xml.comment! "ProjectEOI#{dataOps.order_id}-#{dataOps.pjct_pg_num}"
+                      xml.Extrinsic("Type" => dataOps.project_caption) do dataOps.project_value end
+                      xml.comment! "/ProjectEOI#{dataOps.order_id}-#{dataOps.pjct_pg_num}"
+                      xml.Extrinsic("Type" => "SupplierCode") do dataOps.supplier_code end
                     end
-                    xml.comment! "/ProjectPage#{@order_id}"
+                    xml.comment! "/ProjectPage#{dataOps.order_id}"
                   end
                   xml.comment! "BackTemplate"
-                  xml.BackManufacturerPartID  @back_master_no
-                  xml.BackTemplateName        @back_template_name
-                  xml.BackImage               @back_file
-                  xml.BackImpositionImage     @back_imp_file
+                  xml.BackManufacturerPartID  dataOps.back_master_no
+                  xml.BackTemplateName        dataOps.back_template_name
+                  xml.BackImage               dataOps.back_file
+                  xml.BackImpositionImage     dataOps.back_imp_file
                   xml.comment! "/BackTemplate"
-                  xml.Extrinsic("Type" => "NameOnStateonery") do @stationery_name end
-                  xml.comment! "EOI#{@order_id}"
-                  xml.Extrinsic("Type" => @eoi_caption) do @eoi_value end
-                  xml.comment! "/EOI#{@order_id}"
+                  xml.Extrinsic("Type" => "NameOnStateonery") do dataOps.stationery_name end
+                  xml.comment! "EOI#{dataOps.order_id}"
+                  xml.Extrinsic("Type" => dataOps.eoi_caption) do dataOps.eoi_value end
+                  xml.comment! "/EOI#{dataOps.order_id}"
                   xml.ShipTo do
-                    xml.Carrier  @freight_type
-                    xml.Method   @freight_method
+                    xml.Carrier  dataOps.freight_type
+                    xml.Method   dataOps.freight_method
                     xml.PostalAddress do
-                      xml.CompanyName @order_address_company
-                      xml.Name        @customer_name
-                      xml.Attn        @order_attention
-                      [@order_address_1,@order_address_2,@order_address_3].each do |address|
+                      xml.CompanyName dataOps.order_address_company
+                      xml.Name        dataOps.customer_name
+                      xml.Attn        dataOps.order_attention
+                      [dataOps.order_address_1,dataOps.order_address_2,dataOps.order_address_3].each do |address|
                         xml.Address address
                       end
-                      xml.City         @order_city
-                      xml.StateProve   @order_state
-                      xml.PostalCode   @order_zip
-                      xml.Country      @order_country
-                      xml.ContactPhone @order_address_phone_number
+                      xml.City         dataOps.order_city
+                      xml.StateProve   dataOps.order_state
+                      xml.PostalCode   dataOps.order_zip
+                      xml.Country      dataOps.order_country
+                      xml.ContactPhone dataOps.order_address_phone_number
                     end
                   end
                   xml.Charges("Currency" => "USD") do
                     xml.comment! "OrderCost"
-                    xml.Item @order_cost
+                    xml.Item dataOps.order_cost
                     xml.comment! "/OrderCost"
                     xml.comment! "OrderTax"
-                    xml.Tax @order_tax
+                    xml.Tax dataOps.order_tax
                     xml.comment! "/OrderTax"
                     xml.comment! "OrderPostage"
-                    xml.Postage @order_postage
+                    xml.Postage dataOps.order_postage
                     xml.comment! "/OrderPostage"
                     xml.comment! "OrderTotal"
-                    xml.Total @total_cost
+                    xml.Total dataOps.total_cost
                     xml.comment! "/OrderTotal"
                   end
                 end
@@ -234,6 +225,21 @@ class Ops
   end
 
   def return_shoopingcart_xml(ops_template_id)
+  end
+
+  def verify_response response
+    response_in_hash = convert_to_hash(response)
+    status      = response_in_hash['cxml']['Response']['Status']['code']
+    if status == "200"
+      response_in_hash
+    else
+      url = "http://localhost:3000/fails"
+    end
+  end
+
+  def create_struct data
+    hash = eval(data)
+    OpenStruct.new(hash)
   end
 
   def convert_to_xml(hash)
